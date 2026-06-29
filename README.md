@@ -1,66 +1,64 @@
 # fxxkwx
 
-`fxxkwx` is a small Python tool for replacing the bundled Weixin for Windows
-notification sound in `Weixin.dll`.
+`fxxkwx` 是一个用于替换 Windows 版微信 `Weixin.dll` 内置提示音的小型
+Python 工具。
 
-It targets the Qt RCC layout observed in Weixin `4.1.9.35`. The tool converts
-an input audio file to `44100Hz / stereo / 16-bit PCM WAV`, writes it into the
-larger bundled `voip_phone_ringing.wav` resource slot, and redirects
-`wechat_notify.wav` to that slot. This avoids the accelerated playback caused
-by replacing the original small notification slot with lower-rate audio.
+本项目针对微信 `4.1.9.35` 中观察到的 Qt RCC 资源布局。脚本会把输入音频
+转换为 `44100Hz / 双声道 / 16-bit PCM WAV`，写入包内更大的
+`voip_phone_ringing.wav` 资源槽位，然后把 `wechat_notify.wav` 重定向到该槽位。
+这样可以避免直接把低采样率或低位深音频塞进原提示音槽位后，被微信按固定格式
+播放而导致加速的问题。
 
-Author: RuabbitX `<RuabbitX996@outlook.com>`
+作者：RuabbitX `<RuabbitX996@outlook.com>`
 
-## Requirements
+## 环境要求
 
 - Python 3.10+
-- `ffmpeg` available in `PATH`
-- A local copy of `Weixin.dll` from Weixin for Windows `4.1.9.35`
+- `ffmpeg` 已加入 `PATH`
+- 本地拥有 Windows 版微信 `4.1.9.35` 的 `Weixin.dll`
 
-## Usage
+## 使用方法
 
-Inspect the current resource:
+查看当前提示音资源：
 
 ```powershell
 python .\fxxkwx.py inspect --dll "C:\path\to\4.1.9.35\Weixin.dll"
 ```
 
-Patch the notification sound:
+替换提示音：
 
 ```powershell
 python .\fxxkwx.py patch --dll "C:\path\to\4.1.9.35\Weixin.dll" --audio "C:\path\to\sound.mp3"
 ```
 
-Preview without modifying the DLL:
+只预览将要执行的修改，不写入 DLL：
 
 ```powershell
 python .\fxxkwx.py patch --dll "C:\path\to\4.1.9.35\Weixin.dll" --audio "C:\path\to\sound.mp3" --dry-run
 ```
 
-If the converted audio is longer than the expansion slot capacity, either use a
-shorter audio file or let the tool trim it:
+如果转换后的音频超过扩展槽位容量，可以换更短的音频，或允许脚本自动截断：
 
 ```powershell
 python .\fxxkwx.py patch --dll "C:\path\to\4.1.9.35\Weixin.dll" --audio "C:\path\to\sound.mp3" --trim-to-fit
 ```
 
-## What It Changes
+## 修改内容
 
-The script uses these version-specific offsets:
+脚本使用以下版本相关偏移：
 
-- `wechat_notify.wav` Qt tree node: `128660000`
-- `wechat_notify.wav` data offset field: `128660010`
-- original `wechat_notify.wav` data offset: `479700`
-- expansion data offset: `714644`
-- expansion data entry: `119590836`
-- expansion capacity: `546700` bytes
+- `wechat_notify.wav` 的 Qt tree 节点：`128660000`
+- `wechat_notify.wav` 的 data offset 字段：`128660010`
+- 原始 `wechat_notify.wav` 的 data offset：`479700`
+- 扩展槽位 data offset：`714644`
+- 扩展槽位 data entry：`119590836`
+- 扩展槽位容量：`546700` 字节
 
-The expansion slot originally belongs to `voip_phone_ringing.wav`, so that
-resource will also resolve to the replacement audio after patching.
+扩展槽位原本属于 `voip_phone_ringing.wav`，因此 patch 后这个资源也会解析到
+替换后的音频。
 
-The script creates a timestamped backup beside the DLL before writing changes.
+写入前，脚本会在 DLL 同目录创建带时间戳的备份文件。
 
-## Notes
+## 注意事项
 
-This project does not include Weixin binaries or sample audio files. Use it only
-against files you are allowed to modify.
+本项目不包含微信二进制文件或示例音频文件。请仅对你有权修改的文件使用本工具。
