@@ -3,11 +3,12 @@
 `fxxkwx` 是一个用于替换 Windows 版微信 `Weixin.dll` 内置提示音的小型
 Python 工具。
 
-本项目针对微信 `4.1.9.35` 中观察到的 Qt RCC 资源布局。脚本会把输入音频
+本项目针对微信 `4.1.9.35` 中观察到的 Qt RCC 资源布局。脚本会先从 DLL 中
+搜索 UTF-16BE 资源名、RIFF/WAVE 音频细节和 RCC tree 文件节点，自动推导
+`name_base`、`data_base`、提示音节点和可复用的大槽位。随后它会把输入音频
 转换为 `44100Hz / 双声道 / 16-bit PCM WAV`，写入包内更大的
-`voip_phone_ringing.wav` 资源槽位，然后把 `wechat_notify.wav` 重定向到该槽位。
-这样可以避免直接把低采样率或低位深音频塞进原提示音槽位后，被微信按固定格式
-播放而导致加速的问题。
+`voip_phone_ringing.wav` 资源槽位，并把 `wechat_notify.wav` 重定向到该槽位。
+这样可以避免直接把低采样率或低位深音频塞进原提示音槽位后，被微信按固定格式播放而导致加速的问题。
 
 作者：RuabbitX `<RuabbitX996@outlook.com>`
 
@@ -23,6 +24,12 @@ Python 工具。
 
 ```powershell
 python .\fxxkwx.py inspect --dll "C:\path\to\4.1.9.35\Weixin.dll"
+```
+
+查看脚本自动搜索到的 RCC 偏移和 RIFF/WAVE 槽位：
+
+```powershell
+python .\fxxkwx.py discover --dll "C:\path\to\4.1.9.35\Weixin.dll"
 ```
 
 替换提示音：
@@ -45,8 +52,16 @@ python .\fxxkwx.py patch --dll "C:\path\to\4.1.9.35\Weixin.dll" --audio "C:\path
 
 ## 修改内容
 
-脚本使用以下版本相关偏移：
+脚本不再依赖固定绝对偏移，而是通过以下特征自动搜索：
 
+- UTF-16BE Qt 资源名：`wechat_notify.wav`、`voip_phone_ringing.wav` 等
+- RIFF/WAVE data entry：`[4 字节 big-endian 长度][RIFF/WAVE 数据]`
+- Qt RCC tree 文件节点：通过 `data_offset` 反查到真实音频槽位
+
+在当前 `4.1.9.35` 样本中，通常会搜索到：
+
+- `name_base`：`128639360`
+- `data_base`：`118876192`
 - `wechat_notify.wav` 的 Qt tree 节点：`128660000`
 - `wechat_notify.wav` 的 data offset 字段：`128660010`
 - 原始 `wechat_notify.wav` 的 data offset：`479700`
